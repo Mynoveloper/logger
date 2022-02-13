@@ -105,7 +105,11 @@ func setLoggerOptions() {
 	// the filename is defined on config.json
 	if logOptions.LogFileIsActive {
 
-		exeFilePath, err := os.Executable()
+		exeFilePath, err := os.Getwd()
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		if err != nil {
 			log.Fatal(err)
 		}
