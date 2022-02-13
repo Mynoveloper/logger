@@ -104,7 +104,13 @@ func setLoggerOptions() {
 	// if the LogFileIsActive is true, write to the specific file
 	// the filename is defined on config.json
 	if logOptions.LogFileIsActive {
-		output, err := os.OpenFile(logOptions.LogFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+
+		exeFilePath, err := os.Executable()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		output, err := os.OpenFile(exeFilePath+"\\log\\"+logOptions.LogFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 		if err != nil {
 			log.Fatal(err)
 		}
