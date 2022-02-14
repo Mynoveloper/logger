@@ -3,6 +3,7 @@ package logger
 import (
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -19,9 +20,10 @@ var (
 	Debug *log.Logger
 
 	// Info Default level to write output
-	Info  *log.Logger
-	Warn  *log.Logger
-	Error *log.Logger
+	Info             *log.Logger
+	Warn             *log.Logger
+	Error            *log.Logger
+	internalDebugger *log.Logger
 )
 
 // private variables to set output defined on setLevel caller from setLoggerOptions
@@ -101,22 +103,24 @@ func setLevel() {
 
 // set logger options from the file configuration
 func setLoggerOptions() {
+
 	// if the LogFileIsActive is true, write to the specific file
-	// the filename is defined on config.json
 	if logOptions.LogFileIsActive {
 
-		exeFilePath, err := os.Getwd()
+		// Get path from executable file
+		ex, err := os.Executable()
 		if err != nil {
-			log.Fatal(err)
+			internalDebugger.Println(err)
 		}
 
-		if err != nil {
-			log.Fatal(err)
-		}
+		// Extract relative path of executable file
+		exeFilePath := filepath.Dir(ex)
+		pathLoggerFile := exeFilePath + "\\log\\" + logOptions.LogFileName
 
-		output, err := os.OpenFile(exeFilePath+"\\log\\"+logOptions.LogFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+		// Open or create file in the path of loggerFile
+		output, err := os.OpenFile(pathLoggerFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 		if err != nil {
-			log.Fatal(err)
+			internalDebugger.Println(err)
 		}
 
 		debugLoggerOutput = output
@@ -139,6 +143,9 @@ func contains(s []string, str string) bool {
 }
 
 func init() {
+	// If error has occurred write on logger_error.log in the system path
+	internalOutputDebugger, _ := os.OpenFile("logger_error.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	internalDebugger = log.New(internalOutputDebugger, "LOGGER: ", log.Ldate|log.Ltime|log.Lshortfile)
 	supportedFileExtensions := []string{
 		"txt",
 		"log",
@@ -151,15 +158,20 @@ func init() {
 	}
 
 	logOptions.LogFileName = os.Getenv("LOG_FILE_NAME")
+
+	// Not exist file for logger --> logger.log as default name of file
 	if len(logOptions.LogFileName) == 0 {
 		logOptions.LogFileName = "logger.log"
 	} else {
+
+		// File only contain one extension
 		elementsInFileName := strings.Split(logOptions.LogFileName, ".")
 		if len(elementsInFileName) > 2 || len(elementsInFileName) < 2 {
 			log.Println("The file name", logOptions.LogFileName, " is not a correct format, use similar to this: logger.log")
 			log.Println("The file name has changed to logger.log")
 			logOptions.LogFileName = "logger.log"
 		} else {
+			// Evaluate the extensionFile
 			if !contains(supportedFileExtensions, elementsInFileName[1]) {
 				log.Println("The file extension is not supported, so extension has changed to .log")
 				logOptions.LogFileName = elementsInFileName[1] + ".log"
